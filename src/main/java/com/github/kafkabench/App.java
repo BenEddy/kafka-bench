@@ -46,8 +46,8 @@ public class App {
       producers.add(producer);
       executor.execute(producer);
     }
-    long updates = Math.max(1, config.getRuntime().dividedBy(config.getStatusUpdateInterval()));
-    for (int i = 0; i < updates; i++) {
+    long updates = config.getRuntime().toMillis() / config.getStatusUpdateInterval().toMillis();
+    for (int i = 0; i < Math.max(1, updates); i++) {
       Thread.sleep(Math.min(
           config.getRuntime().toMillis(),
           config.getStatusUpdateInterval().toMillis()));
@@ -77,7 +77,7 @@ public class App {
 
     Config() {
       this.throughput = 2000;
-      this.runtime = Duration.ofSeconds(5);
+      this.runtime = Duration.ofSeconds(10);
       this.concurrency = 8;
       this.statusUpdateInterval = Duration.ofSeconds(2);
       this.partition = 0;
@@ -224,7 +224,7 @@ public class App {
 
       long total = nanos.stream().reduce(0L, Long::sum);
       double avg = total * 1.0 / timings.size();
-      long throughput = timings.size() / config.getRuntime().toSeconds();
+      long throughput = timings.size() / config.getRuntime().getSeconds();
       Map<Integer, Double> percentiles = percentiles().indexes(50, 90, 95, 99).compute(nanos);
 
       System.out.println(String.format("Runtime: %d seconds", config.getRuntime().getSeconds()));
