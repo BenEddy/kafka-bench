@@ -159,23 +159,25 @@ public class App {
       KafkaProducer<String, Bytes> producer = buildProducer();
       RateLimiter rateLimiter = config.getRateLimiter();
 
+      ProducerRecord<String, Bytes> record = new ProducerRecord<>(
+          config.getTopic(),
+          config.getPartition(),
+          config.getKey(),
+          Bytes.wrap(config.getPayload()));
+
       running = true;
-      while (running) {
-        timer.start();
 
-        try {
+      try {
+        // don't measure metadata fetch overhead
+        producer.send(record).get();
+        while (running) {
+          timer.start();
           rateLimiter.acquire();
-          producer.send(new ProducerRecord<>(
-              config.getTopic(),
-              config.getPartition(),
-              config.getKey(),
-              Bytes.wrap(config.getPayload()))).get();
-        } catch (InterruptedException | ExecutionException e) {
-          e.printStackTrace();
-          return;
+          producer.send(record).get();
+          reporter.report(timer.stop());
         }
-
-        reporter.report(timer.stop());
+      } catch (InterruptedException | ExecutionException e) {
+        e.printStackTrace();
       }
     }
 
